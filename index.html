@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Max's Drugshop Ledger</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary: #2c3e50; --success: #27ae60; --danger: #e74c3c; --bg: #f4f7f6; --accent: #34495e; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        /* Branding Header */
+        .brand-header { background: white; padding: 15px; text-align: center; border-bottom: 2px solid var(--primary); }
+        .brand-header img { width: 60px; height: auto; margin-bottom: 5px; }
+        .brand-header h1 { margin: 0; color: var(--primary); font-size: 1.4rem; letter-spacing: 1px; }
+        .brand-header p { margin: 2px 0 0 0; color: #7f8c8d; font-size: 0.75rem; font-style: italic; font-weight: bold; }
+
+        /* Tab Navigation */
+        .tab-bar { display: none; background: var(--primary); position: sticky; top: 0; z-index: 1000; justify-content: space-around; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .tab-item { color: #bdc3c7; padding: 12px 5px; font-size: 0.8rem; font-weight: bold; cursor: pointer; flex: 1; text-align: center; border-bottom: 3px solid transparent; }
+        .tab-item.active { color: white; border-bottom: 3px solid var(--success); background: rgba(255,255,255,0.1); }
+        
+        /* Layout */
+        .section { display: none; padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Login Screen */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); z-index: 2000; display: flex; justify-content: center; align-items: center; color: white; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; width: 280px; text-align: center; color: #333; }
+
+        /* Elements */
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 5px solid var(--danger); margin-bottom: 20px; }
+        .stat-card h3 { margin: 0; color: #666; font-size: 0.8rem; text-transform: uppercase; }
+        .stat-card p { margin: 10px 0 0 0; font-size: 1.8rem; font-weight: bold; color: var(--primary); }
+        .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        input, button { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-pay { background: var(--success); width: auto; padding: 5px 12px; font-size: 0.8rem; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+        .tag { padding: 3px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .tag-partial { background: #fff9c4; color: #fbc02d; border: 1px solid #fbc02d; }
+        h3 {text-align: center;}
+        .tag-unpaid { background: #ffebee; color: var(--danger); border: 1px solid var(--danger); }
+    </style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <img src="logo.jpg" style="width: 80px; border-radius: 50%" alt="Arem Logo">
+        <h2 style="margin: 10px 0 5px 0;">Arem Medicare</h2>
+        <p style="color: #666; font-size: 0.7rem; margin-bottom: 20px;">Your Trusted Health Partner</p>
+        <input type="password" id="passCode" placeholder="Access Code">
+        <button onclick="login()">Enter System</button>
+    </div>
+</div>
+
+<div id="brand-info" class="brand-header" style="display: none;">
+    <img src="logo.png" alt="Arem Logo">
+    <h1>Max's Drugshop</h1>
+    <p>Your Trusted Health Partner</p>
+</div>
+
+<div class="tab-bar" id="main-nav">
+    <div class="tab-item active" onclick="switchTab('new-entry', this)">📝 New Debt</div>
+    <div class="tab-item" onclick="switchTab('active-debtors', this)">📒 Ledger</div>
+    <div class="tab-item" onclick="switchTab('security', this)">⚙️ Admin</div>
+    <div class="tab-item" onclick="logout()" style="color: var(--danger);">🔓 Exit</div>
+</div>
+
+<main id="app-content" style="display: none;">
+    <div id="new-entry" class="section active">
+        <div class="stat-card">
+            <h3>Outstanding Collections</h3>
+            <p id="totalUncollected" style="text-align: center;">Ugx 0</p>
+        </div>
+
+        <div class="card">
+            <h3>Record New Debt</h3>
+            <input type="text" id="custName" placeholder="Patient Full Name">
+            <input type="tel" id="custPhone" placeholder="Phone Number">
+            <input type="text" id="custAddress" placeholder="Village / Physical Address">
+            <input type="date" id="debtDate">
+
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef;">
+                <p style="margin:0 0 8px 0; font-size: 0.8rem; font-weight: bold; color: var(--primary);">List Medicines:</p>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="tempMed" placeholder="Enter drug name" style="margin-bottom:0; flex: 2;">
+                    <button onclick="addMedToList()" style="width: auto; margin-bottom:0; flex: 1;">+ Add</button>
+                </div>
+                <ul id="medListDisplay" style="font-size: 0.85rem; padding-left: 18px; margin-top: 10px; color: var(--primary);"></ul>
+            </div>
+
+            <input type="number" id="debtAmount" placeholder="Total Amount (Ugx)">
+            <button onclick="saveDebt()" style="background: var(--danger);">Record Debt</button>
+        </div>
+    </div>
+
+    <div id="active-debtors" class="section">
+        <h3>Debtor List</h3>
+        <div class="card" style="padding: 10px; overflow-x: auto;">
+            <table id="debtTable">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Balance</th>
+                        <th>Medicine</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="security" class="section">
+        <div class="card">
+            <h3>System Security</h3>
+            <label style="font-size: 0.75rem; color: #666;">Current Access Code</label>
+            <input type="password" id="oldPass" placeholder="****">
+            <hr style="border: 0; border-top: 1px dashed #ddd; margin: 15px 0;">
+            <label style="font-size: 0.75rem; color: #666;">New Access Code</label>
+            <input type="password" id="newPass1" placeholder="New 4-digit code">
+            <input type="password" id="newPass2" placeholder="Confirm new code">
+            <button onclick="updatePassword()">Update Code</button>
+        </div>
+        <p style="text-align: center; color: #999; font-size: 0.7rem; margin-top: 50px;">Branch: Angic, Kole District</p>
+    </div>
+</main>
+
+<script>
+    let db;
+    let tempMedicines = [];
+    let currentPassword = localStorage.getItem('aremDebtPass') || "1234";
+
+    const request = indexedDB.open("AremDebtDB", 2);
+    request.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains("debts")) {
+            db.createObjectStore("debts", { keyPath: "id", autoIncrement: true });
+        }
+    };
+    request.onsuccess = e => { 
+        db = e.target.result; 
+        if(sessionStorage.getItem('isLoggedIn') === 'true') showApp();
+    };
+
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        el.classList.add('active');
+        if(tabId === 'active-debtors') renderDebts();
+    }
+
+    function showApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('brand-info').style.display = 'block';
+        document.getElementById('main-nav').style.display = 'flex';
+        document.getElementById('app-content').style.display = 'block';
+        renderDebts();
+    }
+
+    function login() {
+        if (document.getElementById('passCode').value === currentPassword) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            showApp();
+        } else {
+            alert("Unauthorized Access!");
+        }
+    }
+
+    function logout() {
+        if(confirm("Sign out of Max's Drugshop?")) {
+            sessionStorage.removeItem('isLoggedIn');
+            location.reload();
+        }
+    }
+
+    function updatePassword() {
+        const op = document.getElementById('oldPass').value;
+        const n1 = document.getElementById('newPass1').value;
+        const n2 = document.getElementById('newPass2').value;
+        if (op === currentPassword && n1 === n2 && n1.length >= 4) {
+            localStorage.setItem('aremDebtPass', n1);
+            currentPassword = n1;
+            alert("Security Code Changed!");
+            ['oldPass', 'newPass1', 'newPass2'].forEach(id => document.getElementById(id).value = "");
+        } else {
+            alert("Verification failed. Check your inputs.");
+        }
+    }
+
+    function addMedToList() {
+        const input = document.getElementById('tempMed');
+        if(input.value.trim()) {
+            tempMedicines.push(input.value.trim());
+            document.getElementById('medListDisplay').innerHTML = tempMedicines.map((m, i) => 
+                `<li>${m} <span onclick="removeMed(${i})" style="color:var(--danger); cursor:pointer; margin-left:10px;">[x]</span></li>`
+            ).join('');
+            input.value = ""; input.focus();
+        }
+    }
+
+    function removeMed(index) {
+        tempMedicines.splice(index, 1);
+        document.getElementById('medListDisplay').innerHTML = tempMedicines.map((m, i) => `<li>${m}</li>`).join('');
+    }
+
+    function saveDebt() {
+        const name = document.getElementById('custName').value;
+        const amount = parseFloat(document.getElementById('debtAmount').value);
+        if(!name || isNaN(amount) || tempMedicines.length === 0) return alert("Please add medicines and patient details!");
+
+        const tx = db.transaction("debts", "readwrite");
+        tx.objectStore("debts").add({
+            name, address: document.getElementById('custAddress').value,
+            phone: document.getElementById('custPhone').value,
+            med: tempMedicines.join(", "),
+            amount, paid: 0, date: document.getElementById('debtDate').value,
+            status: 'Unpaid'
+        });
+        tx.oncomplete = () => {
+            alert("Debt Recorded Successfully");
+            tempMedicines = [];
+            document.getElementById('medListDisplay').innerHTML = "";
+            ['custName', 'custAddress', 'custPhone', 'debtAmount', 'debtDate'].forEach(id => document.getElementById(id).value = "");
+            renderDebts();
+        };
+    }
+
+    function renderDebts() {
+        if(!db) return;
+        const tbody = document.querySelector("#debtTable tbody");
+        tbody.innerHTML = "";
+        let total = 0;
+        db.transaction("debts").objectStore("debts").getAll().onsuccess = e => {
+            e.target.result.forEach(d => {
+                const bal = d.amount - d.paid;
+                if(bal > 0) {
+                    total += bal;
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${d.name}</strong><br><small>${d.phone}</small></td>
+                        <td>Ugx ${bal.toLocaleString()}<br><span class="tag ${d.paid > 0 ? 'tag-partial' : 'tag-unpaid'}">${d.status}</span></td>
+                        <td><small>${d.med}</small></td>
+                        <td><button onclick="payDebt(${d.id}, ${bal})" class="btn-pay">Pay</button></td>
+                    </tr>`;
+                }
+            });
+            document.getElementById('totalUncollected').innerText = "Ugx " + total.toLocaleString();
+        };
+    }
+
+    function payDebt(id, bal) {
+        const p = parseFloat(prompt(`Enter amount paid (Max Ugx ${bal.toLocaleString()}):`, bal));
+        if(!isNaN(p) && p > 0) {
+            const tx = db.transaction("debts", "readwrite");
+            const store = tx.objectStore("debts");
+            store.get(id).onsuccess = e => {
+                const data = e.target.result;
+                data.paid += p;
+                data.status = (data.paid >= data.amount) ? 'Paid' : 'Partial';
+                store.put(data);
+                tx.oncomplete = () => renderDebts();
+            };
+        }
+    }
+</script>
+</body>
+</html>
