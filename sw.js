@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arem-medicare-v1';
+const CACHE_NAME = 'maxdrugshop-v1';
 const ASSETS = [
   './',
   './index.html',
